@@ -820,7 +820,7 @@ class ConversationBot:
         if 'ImageCaptioning' not in load_dict:
             raise ValueError("You have to load ImageCaptioning as a basic function for VisualChatGPT")
 
-        self.llm = Cohere(model="summarize-xlarge",cohere_api_key="vGCEakgncpouo9Nz0rsJ0Bq7XRvwNgTCZMKSohlg",temperature=0.7,max_tokens= 400)
+        self.llm = Cohere(model="summarize-xlarge",cohere_api_key="WpqbKuHljLuK7QeZ7Oc7PHR6yo2euueojjjnJJXh",temperature=0.7,max_tokens= 400)
         self.memory = ConversationBufferMemory(memory_key="chat_history", output_key='output')
 
         self.models = dict()

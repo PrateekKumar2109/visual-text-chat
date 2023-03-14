@@ -21,9 +21,7 @@ from controlnet_aux import OpenposeDetector, MLSDdetector, HEDdetector
 from langchain.agents.initialize import initialize_agent
 from langchain.agents.tools import Tool
 from langchain.chains.conversation.memory import ConversationBufferMemory
-from langchain.llms.
-
-import OpenAI,Cohere
+from langchain.llms import OpenAI,Cohere
 
 VISUAL_TEXT_CHAT_PREFIX = """Visual ChatGPT is designed to be able to assist with a wide range of text and visual related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. Visual ChatGPT is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
 

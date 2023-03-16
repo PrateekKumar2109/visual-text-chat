@@ -887,22 +887,24 @@ if __name__ == '__main__':
     args = parser.parse_args()
     load_dict = {e.split('_')[0].strip(): e.split('_')[1].strip() for e in args.load.split(',')}
     bot = ConversationBot(load_dict=load_dict)
-    with gr.Blocks(css="#chatbot .overflow-y-auto{height:500px}") as demo:
-        chatbot = gr.Chatbot(elem_id="chatbot", label="Visual ChatGPT")
-        state = gr.State([])
-        with gr.Row():
-            with gr.Column(scale=0.7):
-                txt = gr.Textbox(show_label=False, placeholder="Enter text and press enter, or upload an image").style(
-                    container=False)
-            with gr.Column(scale=0.15, min_width=0):
-                clear = gr.Button("Clear")
-            with gr.Column(scale=0.15, min_width=0):
-                btn = gr.UploadButton("Upload", file_types=["image"])
+    st.title("Visual ChatGPT") # Set title of app
 
-        txt.submit(bot.run_text, [txt, state], [chatbot, state])
-        txt.submit(lambda: "", None, txt)
-        btn.upload(bot.run_image, [btn, state, txt], [chatbot, state, txt])
-        clear.click(bot.memory.clear)
-        clear.click(lambda: [], None, chatbot)
-        clear.click(lambda: [], None, state)
-        demo.launch(server_name="0.0.0.0", server_port=7862,share=True)
+    state = st.session_state # Get session state object
+
+    if "messages" not in state: # Initialize messages list if not in state
+     state.messages = []
+
+    txt = st.text_input("Enter text and press enter, or upload an image") # Create text input component
+    btn = st.file_uploader("Upload", type=["image"]) # Create file uploader component
+    clear = st.button("Clear") # Create button component
+
+    if txt: # If text input is not empty
+      message, new_state = bot.run_text(txt, state) # Run text input through bot and get output message and new state
+      state.messages.append(("user", txt)) # Append user message to messages list
+      state.messages.append(("bot", message)) # Append bot message to messages list
+      txt = "" # Clear text input
+
+    if btn: # If file uploader is not empty
+     message, new_state, new_txt = bot.run_image(btn, state, txt) # Run image input through bot and get output message, new state and new text input
+     state.messages.append(("user", btn))
+  

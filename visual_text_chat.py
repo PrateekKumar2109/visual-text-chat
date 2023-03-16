@@ -8,6 +8,7 @@ import uuid
 from PIL import Image
 import numpy as np
 import argparse
+import streamlit as st
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, CLIPSegProcessor, CLIPSegForImageSegmentation
 from transformers import pipeline, BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering

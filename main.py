@@ -910,7 +910,6 @@ if __name__ == '__main__':
         clear.click(bot.memory.clear)
         clear.click(lambda: [], None, chatbot)
         clear.click(lambda: [], None, state)
-        if args.share:
-            demo.launch(share=True)
-        else:
-            demo.launch(server_name="0.0.0.0", server_port=7860)
+       
+        demo.launch(share=True)
+        

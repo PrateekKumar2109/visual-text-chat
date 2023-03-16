@@ -8,7 +8,6 @@ import uuid
 from PIL import Image
 import numpy as np
 import argparse
-import streamlit as st
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, CLIPSegProcessor, CLIPSegForImageSegmentation
 from transformers import pipeline, BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering
@@ -22,9 +21,9 @@ from controlnet_aux import OpenposeDetector, MLSDdetector, HEDdetector
 from langchain.agents.initialize import initialize_agent
 from langchain.agents.tools import Tool
 from langchain.chains.conversation.memory import ConversationBufferMemory
-from langchain.llms import OpenAI,Cohere
+from langchain.llms.openai import OpenAI
 
-VISUAL_TEXT_CHAT_PREFIX = """Visual ChatGPT is designed to be able to assist with a wide range of text and visual related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. Visual ChatGPT is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+VISUAL_CHATGPT_PREFIX = """Visual ChatGPT is designed to be able to assist with a wide range of text and visual related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. Visual ChatGPT is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
 
 Visual ChatGPT is able to process and understand large amounts of text and images. As a language model, Visual ChatGPT can not directly read images, but it has a list of tools to finish different visual tasks. Each image will have a file name formed as "image/xxx.png", and Visual ChatGPT can invoke different tools to indirectly understand pictures. When talking about images, Visual ChatGPT is very strict to the file name and will never fabricate nonexistent files. When using tools to generate new image files, Visual ChatGPT is also known that the image may not be the same as the user's demand, and will use other visual question answering tools or description tools to observe the real image. Visual ChatGPT is able to use tools in a sequence, and is loyal to the tool observation outputs rather than faking the image content and image file name. It will remember to provide the file name from the last tool observation, if a new image is generated.
 
@@ -38,7 +37,7 @@ TOOLS:
 
 Visual ChatGPT  has access to the following tools:"""
 
-VISUAL_TEXT_CHAT_FORMAT_INSTRUCTIONS = """To use a tool, please use the following format:
+VISUAL_CHATGPT_FORMAT_INSTRUCTIONS = """To use a tool, please use the following format:
 
 ```
 Thought: Do I need to use a tool? Yes
@@ -55,7 +54,7 @@ Thought: Do I need to use a tool? No
 ```
 """
 
-VISUAL_TEXT_CHAT_SUFFIX = """You are very strict to the filename correctness and will never fake a file name if it does not exist.
+VISUAL_CHATGPT_SUFFIX = """You are very strict to the filename correctness and will never fake a file name if it does not exist.
 You will remember to provide the image file name loyally if it's provided in the last tool observation.
 
 Begin!
@@ -821,7 +820,7 @@ class ConversationBot:
         if 'ImageCaptioning' not in load_dict:
             raise ValueError("You have to load ImageCaptioning as a basic function for VisualChatGPT")
 
-        self.llm = Cohere(model="summarize-xlarge",cohere_api_key="WpqbKuHljLuK7QeZ7Oc7PHR6yo2euueojjjnJJXh",temperature=0.7,max_tokens= 400)
+        self.llm = OpenAI(temperature=0)
         self.memory = ConversationBufferMemory(memory_key="chat_history", output_key='output')
 
         self.models = dict()
@@ -842,8 +841,8 @@ class ConversationBot:
             verbose=True,
             memory=self.memory,
             return_intermediate_steps=True,
-            agent_kwargs={'prefix': VISUAL_TEXT_CHAT_PREFIX, 'format_instructions': VISUAL_TEXT_CHAT_FORMAT_INSTRUCTIONS,
-                          'suffix': VISUAL_TEXT_CHAT_SUFFIX}, )
+            agent_kwargs={'prefix': VISUAL_CHATGPT_PREFIX, 'format_instructions': VISUAL_CHATGPT_FORMAT_INSTRUCTIONS,
+                          'suffix': VISUAL_CHATGPT_SUFFIX}, )
 
     def run_text(self, text, state):
         self.agent.memory.buffer = cut_dialogue_history(self.agent.memory.buffer, keep_last_n_words=500)
@@ -888,24 +887,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
     load_dict = {e.split('_')[0].strip(): e.split('_')[1].strip() for e in args.load.split(',')}
     bot = ConversationBot(load_dict=load_dict)
-    st.title("Visual ChatGPT") # Set title of app
+    with gr.Blocks(css="#chatbot .overflow-y-auto{height:500px}") as demo:
+        chatbot = gr.Chatbot(elem_id="chatbot", label="Visual ChatGPT")
+        state = gr.State([])
+        with gr.Row():
+            with gr.Column(scale=0.7):
+                txt = gr.Textbox(show_label=False, placeholder="Enter text and press enter, or upload an image").style(
+                    container=False)
+            with gr.Column(scale=0.15, min_width=0):
+                clear = gr.Button("Clear")
+            with gr.Column(scale=0.15, min_width=0):
+                btn = gr.UploadButton("Upload", file_types=["image"])
 
-    state = st.session_state # Get session state object
-
-    if "messages" not in state: # Initialize messages list if not in state
-     state.messages = []
-
-    txt = st.text_input("Enter text and press enter, or upload an image") # Create text input component
-    btn = st.file_uploader("Upload", type=["image"]) # Create file uploader component
-    clear = st.button("Clear") # Create button component
-
-    if txt: # If text input is not empty
-      message, new_state = bot.run_text(txt, state) # Run text input through bot and get output message and new state
-      state.messages.append(("user", txt)) # Append user message to messages list
-      state.messages.append(("bot", message)) # Append bot message to messages list
-      txt = "" # Clear text input
-
-    if btn: # If file uploader is not empty
-     message, new_state, new_txt = bot.run_image(btn, state, txt) # Run image input through bot and get output message, new state and new text input
-     state.messages.append(("user", btn))
-  
+        txt.submit(bot.run_text, [txt, state], [chatbot, state])
+        txt.submit(lambda: "", None, txt)
+        btn.upload(bot.run_image, [btn, state, txt], [chatbot, state, txt])
+        clear.click(bot.memory.clear)
+        clear.click(lambda: [], None, chatbot)
+        clear.click(lambda: [], None, state)
+        demo.launch(server_name="0.0.0.0", server_port=7868)
